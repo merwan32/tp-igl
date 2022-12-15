@@ -16,9 +16,6 @@ class ImageAdmin(admin.ModelAdmin):
     list_display= ('Post','img')
 
 
-class ProfileAdmin(admin.ModelAdmin):
-    search_fields= ('user','address','phone')
-    list_display= ('user','address','phone')
 
 class WilayaAdmin(admin.ModelAdmin):
     search_fields= ('name',)
@@ -48,7 +45,6 @@ class CommuneAdmin(admin.ModelAdmin):
 
 admin.site.register(Post,PostAdmin)
 admin.site.register(Image,ImageAdmin)
-admin.site.register(Profile,ProfileAdmin)
 admin.site.register(Wilaya,WilayaAdmin)
 admin.site.register(Commune,CommuneAdmin)
 admin.site.unregister(Group)
