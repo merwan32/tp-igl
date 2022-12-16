@@ -19,7 +19,6 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    #re_path(r'^auth/', include('drf_social_oauth2.urls', namespace='drf')),
     path('api/',include('app.urls')),
     path('', admin.site.urls),
 

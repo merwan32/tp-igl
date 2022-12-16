@@ -21,29 +21,45 @@ class UserCreate(APIView):
     permission_classes = (permissions.AllowAny,)
 
     def post(self, request, format='json'):
-        serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            if user:
+        if request.data['password'] != request.data['pswd'] :
+            serializer = UserSerializer(data=request.data)
+            if serializer.is_valid():
+                user = serializer.save()
+                if user:
+                    json = serializer.data
+                    return Response(json, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response("password don't match", status=status.HTTP_400_BAD_REQUEST)
+
+
+class GoogleLogin(APIView):
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self,request,format = 'json'):
+        if User.objects.filter(email=request.data['email']).exists():
+            serializer = MyTokenObtainPairSerializer(data=request.data)
+            if serializer.is_valid():
                 json = serializer.data
                 return Response(json, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class HelloWorldView(APIView):
-
-    def get(self, request):
-        return Response(data={"hello":"world"}, status=status.HTTP_200_OK)
+        else:
+            serializer = UserSerializer(data=request.data)
+            if serializer.is_valid():
+                user = serializer.save()
+                if user:
+                    json = serializer.data
+                    return Response(json, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
 
 
 class postList(generics.ListCreateAPIView):
     serializer_class = PostSerializers
-    
-
     queryset = Post.objects.all()
 
 class postDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = PostSerializers
-
     queryset = Post.objects.all()
 
 
@@ -51,7 +67,6 @@ class postDetail(generics.RetrieveUpdateDestroyAPIView):
 
 class ImageList(generics.ListCreateAPIView):
     serializer_class = ImageSerializers
-    
 
     def get_queryset(self):
         queryset = Image.objects.all()
