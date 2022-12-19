@@ -7,15 +7,73 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.http import HttpResponse
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import permissions
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from rest_auth.registration.views import SocialLoginView
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+from rest_auth.registration.serializers import SocialLoginSerializer
+from google.oauth2 import id_token
+from google.auth import transport
+import requests
+import json
+
 
 # Create your views here.
 
-
-class ObtainTokenPairWithinfoView(TokenObtainPairView):
+class GoogleView(APIView):
     permission_classes = (permissions.AllowAny,)
-    serializer_class = MyTokenObtainPairSerializer
+    def post(self, request):
+        token = {'id_token': request.data.get('id_token')}
+
+        try:
+            # Specify the CLIENT_ID of the app that accesses the backend:
+            idinfo = id_token.verify_oauth2_token(token['id_token'], transport.requests.Request(), '938713439568-q7barlgciie3puigfe5bqjqqlgi2pphj.apps.googleusercontent.com')
+            
+
+            if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+                raise ValueError('Wrong issuer.')
+            data = {
+                    "first_name": idinfo['given_name'],
+                    "last_name": idinfo['family_name'],
+                    "username": idinfo['name'],
+                    "phone": None,
+                    "email": idinfo['email'],
+                    "password": idinfo['sub']
+                    }
+            if User.objects.filter(email=idinfo['email']).exists():
+                r = requests.post(
+                    'http://127.0.0.1:8000/api/token/obtain/',
+                    headers={
+                        'Content-Type': 'application/json',
+                        'accept': 'application/json'
+                    },
+                    json=data
+                )
+                return Response(r.json())
+            else:
+                serializer = UserSerializer(data=data)
+                if serializer.is_valid():
+                    user = serializer.save()
+                    if user:
+                        r = requests.post(
+                            'http://127.0.0.1:8000/api/token/obtain/',
+                            headers={
+                                'Content-Type': 'application/json',
+                                'accept': 'application/json'
+                            },
+                            json=data
+                        )
+                        return Response(r.json(), status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except ValueError as err:
+            
+            content = {'message': 'Invalid token'}
+            return Response(content)
+
+
 
 class UserCreate(APIView):
     permission_classes = (permissions.AllowAny,)
@@ -32,26 +90,6 @@ class UserCreate(APIView):
         return Response("password don't match", status=status.HTTP_400_BAD_REQUEST)
 
 
-class GoogleLogin(APIView):
-    permission_classes = (permissions.AllowAny,)
-
-    def post(self,request,format = 'json'):
-        if User.objects.filter(email=request.data['email']).exists():
-            serializer = MyTokenObtainPairSerializer(data=request.data)
-            if serializer.is_valid():
-                json = serializer.data
-                return Response(json, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        else:
-            serializer = UserSerializer(data=request.data)
-            if serializer.is_valid():
-                user = serializer.save()
-                if user:
-                    json = serializer.data
-                    return Response(json, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
 
 
 class postList(generics.ListCreateAPIView):

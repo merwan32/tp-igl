@@ -15,7 +15,8 @@ urlpatterns = [
     path('discussion/', DiscussionList),
     path('message/', MessageList),
     path('user/create/', UserCreate.as_view(), name="create_user"),
-    #path('user/google/login/', GoogleLogin.as_view(), name="google_login"),
-    path('token/obtain/',  ObtainTokenPairWithinfoView.as_view(), name='token_create'), 
+    path('token/obtain/',  jwt_views.TokenObtainPairView.as_view(), name='token_create'), 
     path('token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
+    path('google-login/', GoogleView.as_view(), name='google-login'),
+
 ]

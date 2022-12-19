@@ -5,16 +5,6 @@ from django.contrib.auth.models import User
 
 
 
-class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-
-    @classmethod
-    def get_token(cls, user):
-        token = super(MyTokenObtainPairSerializer, cls).get_token(user)
-
-        token['username'] = user.username
-        token['email'] = user.email
-        return token
-
 
 class UserSerializer(serializers.ModelSerializer):
 
