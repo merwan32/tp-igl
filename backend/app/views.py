@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render,redirect
 from rest_framework import generics
 from .models import *
 from .serialezers import *
@@ -18,6 +18,11 @@ from google.oauth2 import id_token
 from google.auth import transport
 import requests
 import json
+from rest_framework.authtoken.models import Token
+import requests
+from bs4 import BeautifulSoup
+from geopy.geocoders import Nominatim
+
 
 
 # Create your views here.
@@ -176,3 +181,83 @@ def MessageList(request):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def CreatePost(request):
+    p = Post()
+    p.user = request.user
+    p.category = request.data['category']
+    p.type = request.data['type']
+    p.surface = request.data['surface']
+    p.description = request.data['description']
+    p.prix = request.data['prix']
+    p.save()
+    for x in request.data['images']:
+        i = Image()
+        i.Post = p
+        i.img = x
+        i.save()
+    return Response(request.data)
+
+
+geolocator = Nominatim(user_agent="tpigl")
+@api_view(['GET'])
+@permission_classes((permissions.AllowAny,))
+def scrap(request):
+    for i in range(1,10):
+        try:
+            r = requests.get("http://www.annonce-algerie.com/AnnoncesImmobilier.asp?rech_page_num="+str(i))
+            soup = BeautifulSoup(r.content, features='lxml')
+            articles = soup.findAll('tr',class_='Tableau1')  
+            for a in articles:
+                link = 'http://www.annonce-algerie.com/'
+                x = a.findAll('td')
+                link += x[7].find('a')['href']
+                location = geolocator.geocode(x[1].text,timeout=None)
+                try:
+                    r2 = requests.get(link)
+                    soup2 = BeautifulSoup(r2.content, features='lxml')
+                    if soup2.findAll('td',class_='da_label_field')[3].text == 'Surface':
+                        surface = soup2.findAll('td',class_='da_field_text')[3].text.replace(u' ',u'').replace(u'\xa0m²',u'')
+                        description = soup2.findAll('td',class_='da_field_text')[5].text
+                    elif soup2.findAll('td',class_='da_label_field')[2].text == 'Surface':
+                        surface = soup2.findAll('td',class_='da_field_text')[2].text.replace(u' ',u'').replace(u'\xa0m²',u'')
+                        description = soup2.findAll('td',class_='da_field_text')[4].text
+                    else:
+                        surface = 0
+                        description = soup2.findAll('td',class_='da_field_text')[4].text
+
+                    if not Post.objects.filter(description = description).count() and x[9].text.replace(' ','').replace(u'\xa0',u'') != 'n.d' and location:
+                        adr = Adress()
+                        adr.lat = location.latitude
+                        adr.long = location.longitude
+                        adr.commune = Commune.objects.filter(name__contains = str(x[1].text.strip())).first()
+                        adr.save()
+
+                        p = Post()
+                        p.user = User.objects.get(username = 'admin') 
+                        p.category = x[3].text
+                        p.type = x[5].text
+                        p.prix = int(float(x[9].text.replace(' ','').replace(u'\xa0',u'')))
+                        p.surface = surface
+                        p.description = description
+                        p.adress = adr
+                        p.save()
+
+                        imgs = soup2.findAll('table',class_='PhotoView1')
+                        for img in imgs:
+                            i = Image()
+                            i.Post = p
+                            i.img = img.find('img')['src']
+                            i.save()
+                    
+                except Exception as e:
+                    return Response('The scraping job failed. See exception 2: '+str(i)+str(e))
+
+            
+        except Exception as e:
+            return Response('The scraping job failed. See exception: '+str(e))
+
+    return redirect('../../app/post/')
+        

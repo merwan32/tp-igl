@@ -18,5 +18,6 @@ urlpatterns = [
     path('token/obtain/',  jwt_views.TokenObtainPairView.as_view(), name='token_create'), 
     path('token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
     path('google-login/', GoogleView.as_view(), name='google-login'),
-
+    path('post/create/',CreatePost),
+    path('scrap/',scrap)
 ]
