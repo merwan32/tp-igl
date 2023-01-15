@@ -7,18 +7,12 @@ from rest_framework import permissions
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.http import HttpResponse
-from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import permissions
-from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
-from rest_auth.registration.views import SocialLoginView
-from allauth.socialaccount.providers.oauth2.client import OAuth2Client
-from rest_auth.registration.serializers import SocialLoginSerializer
 from google.oauth2 import id_token
 from google.auth import transport
+from urllib.parse import urlparse
 import requests
-import json
-from rest_framework.authtoken.models import Token
+from django.core.files.base import ContentFile
 import requests
 from bs4 import BeautifulSoup
 from geopy.geocoders import Nominatim
@@ -185,6 +179,12 @@ def MessageList(request):
 
 @api_view(['POST'])
 def CreatePost(request):
+    adr = Adress()
+    adr.lat = request.data['lat']
+    adr.long = request.data['long']
+    ad = geolocator.reverse(str(request.data['lat'])+","+str(request.data['long']))
+    adr.commune = Commune.objects.filter(name__contains = str(ad.address)).first()
+    adr.save()
     p = Post()
     p.user = request.user
     p.category = request.data['category']
@@ -192,6 +192,7 @@ def CreatePost(request):
     p.surface = request.data['surface']
     p.description = request.data['description']
     p.prix = request.data['prix']
+    p.adress = adr
     p.save()
     for x in request.data['images']:
         i = Image()
@@ -228,7 +229,7 @@ def scrap(request):
                         surface = 0
                         description = soup2.findAll('td',class_='da_field_text')[4].text
 
-                    if not Post.objects.filter(description = description).count() and x[9].text.replace(' ','').replace(u'\xa0',u'') != 'n.d' and location:
+                    if not Post.objects.filter(description = description).count() and x[9].text.replace(' ','').replace(u'\xa0',u'') != 'n.d' and location and Commune.objects.filter(name__contains = str(x[1].text.strip())).first():
                         adr = Adress()
                         adr.lat = location.latitude
                         adr.long = location.longitude
@@ -247,10 +248,16 @@ def scrap(request):
 
                         imgs = soup2.findAll('table',class_='PhotoView1')
                         for img in imgs:
-                            i = Image()
-                            i.Post = p
-                            i.img = img.find('img')['src']
-                            i.save()
+                            img_url = 'http://www.annonce-algerie.com/'+img.find('img')['src']
+                            name = urlparse(img_url).path.split('/')[-1]
+
+                            photo = Image() # set any other fields, but don't commit to DB (ie. don't save())
+
+                            response = requests.get(img_url)
+                            if response.status_code == 200:
+                                photo.Post = p
+                                photo.img.save(name, ContentFile(response.content), save=True)
+                            
                     
                 except Exception as e:
                     return Response('The scraping job failed. See exception 2: '+str(i)+str(e))
@@ -261,3 +268,11 @@ def scrap(request):
 
     return redirect('../../app/post/')
         
+
+
+@api_view(['GET'])
+@permission_classes((permissions.AllowAny,))
+def adressList(request):
+    p = Adress.objects.all()
+    serializer = AdressSerializers(p, many=True)
+    return Response(serializer.data)

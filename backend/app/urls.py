@@ -12,6 +12,7 @@ urlpatterns = [
     path('wilaya/<int:pk>/', WilayaDetail.as_view()),
     path('commune/', CommuneList),
     path('commune/<int:pk>/', CommuneDetail.as_view()),
+    path('adress/', adressList),
     path('discussion/', DiscussionList),
     path('message/', MessageList),
     path('user/create/', UserCreate.as_view(), name="create_user"),

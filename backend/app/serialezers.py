@@ -60,3 +60,8 @@ class MessageSerializers(serializers.ModelSerializer):
     class Meta:
         model = Message
         fields = ('__all__')
+
+class AdressSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Adress
+        fields = ('__all__')

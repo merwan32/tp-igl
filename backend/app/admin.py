@@ -45,7 +45,7 @@ class CommuneAdmin(admin.ModelAdmin):
 
 class AdressAdmin(admin.ModelAdmin):
     search_fields= ('commune',)
-    list_display= ('id','commune')
+    list_display= ('commune',)
 
 admin.site.register(Post,PostAdmin)
 admin.site.register(Image,ImageAdmin)
