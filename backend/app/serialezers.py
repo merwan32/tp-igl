@@ -29,16 +29,10 @@ class UserSerializers(serializers.ModelSerializer):
         fields = ('__all__')
 
 
-class PostSerializers(serializers.ModelSerializer):
-    class Meta:
-        model = Post
-        fields = ('__all__')
 
 
-class ImageSerializers(serializers.ModelSerializer):
-    class Meta:
-        model = Image
-        fields = ('__all__')
+
+
 
 
 class WilayaSerializers(serializers.ModelSerializer):
@@ -47,6 +41,7 @@ class WilayaSerializers(serializers.ModelSerializer):
         fields = ('__all__')
 
 class CommuneSerializers(serializers.ModelSerializer):
+    wilaya = WilayaSerializers(read_only=False)
     class Meta:
         model = Commune
         fields = ('__all__')
@@ -62,6 +57,19 @@ class MessageSerializers(serializers.ModelSerializer):
         fields = ('__all__')
 
 class AdressSerializers(serializers.ModelSerializer):
+    commune = CommuneSerializers(read_only=False)
     class Meta:
         model = Adress
+        fields = ('__all__')
+
+class PostSerializers(serializers.ModelSerializer):
+    adress = AdressSerializers(read_only=False)
+    class Meta:
+        model = Post
+        fields = ('__all__')
+
+class ImageSerializers(serializers.ModelSerializer):
+    Post = PostSerializers(read_only=False)
+    class Meta:
+        model = Image
         fields = ('__all__')

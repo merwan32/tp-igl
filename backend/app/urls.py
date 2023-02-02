@@ -1,6 +1,8 @@
 from django.urls import path
 from .views import *
 from rest_framework_simplejwt import views as jwt_views
+from django.conf import settings
+from django.conf.urls.static import static
 
 
 urlpatterns = [
@@ -20,5 +22,10 @@ urlpatterns = [
     path('token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
     path('google-login/', GoogleView.as_view(), name='google-login'),
     path('post/create/',CreatePost),
+    path('search/', SearchListAPIView.as_view(), name='search'),
+    path('posts/', postsList.as_view()),
+    path('mypost/', mypostList.as_view()),
+    path('detail/<int:postId>', detail.as_view()),
+    path('detail/images/<int:postId>', detailimages.as_view()),
     path('scrap/',scrap)
-]
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

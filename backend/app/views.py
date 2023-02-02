@@ -16,6 +16,8 @@ from django.core.files.base import ContentFile
 import requests
 from bs4 import BeautifulSoup
 from geopy.geocoders import Nominatim
+from django.db.models import Q
+import os
 
 
 
@@ -161,6 +163,10 @@ def DiscussionList(request):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+
+
+
 @api_view(['GET','POST'])
 @permission_classes((permissions.AllowAny,))
 def MessageList(request):
@@ -175,6 +181,46 @@ def MessageList(request):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class detail(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = PostSerializers
+    def get_queryset(self):
+        id = self.kwargs.get('postId')
+        post = Post.objects.filter(Q(id = id))
+        
+        return  post
+    
+class detailimages(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = ImageSerializers
+    def get_queryset(self):
+        id = self.kwargs.get('postId')
+        images = Image.objects.filter(Q(Post_id = id))
+            
+
+        return  images
+    
+class mypostList(generics.ListAPIView):
+    serializer_class = ImageSerializers
+    def get_queryset(self):
+        user = self.request.user
+        posts = Post.objects.filter(Q(user=user))
+        postid = []
+        for p in posts:
+            postid.append(p.id)
+            
+
+        images = Image.objects.filter(Q(id__in=postid))
+
+        seen_posts = set()
+        new_list = []
+        for obj in images:
+            if obj.Post not in seen_posts:
+                new_list.append(obj)
+                seen_posts.add(obj.Post)  
+
+        return  new_list
 
 
 @api_view(['POST'])
@@ -201,6 +247,55 @@ def CreatePost(request):
         i.save()
     return Response(request.data)
 
+def DeletePost(request):
+    
+    Post.objects.get(id = request.data['id']).delete()
+
+
+class SearchListAPIView(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = ImageSerializers
+
+    def get_queryset(self):
+        query = self.request.GET.get('s')
+        type = self.request.GET.get('type')
+        posts = Post.objects.filter(Q(description__contains=query) & Q(category__contains = type) ) if query else []
+        
+        postid = []
+        for p in posts:
+            postid.append(p.id)
+            
+
+        images = Image.objects.filter(Q(id__in=postid))
+
+        seen_posts = set()
+        new_list = []
+        for obj in images:
+            if obj.Post not in seen_posts:
+                new_list.append(obj)
+                seen_posts.add(obj.Post)  
+
+        return  new_list
+
+class postsList(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = ImageSerializers
+
+    def get_queryset(self):
+            
+
+        images = Image.objects.all()
+
+        seen_posts = set()
+        new_list = []
+        for obj in images:
+            if obj.Post not in seen_posts:
+                new_list.append(obj)
+                seen_posts.add(obj.Post) 
+            if len(new_list) == 16:
+                break
+
+        return  new_list
 
 geolocator = Nominatim(user_agent="tpigl")
 @api_view(['GET'])
