@@ -55,13 +55,14 @@ INSTALLED_APPS = [
     'rest_auth.registration',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+    'rest_framework_swagger',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    #'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -74,7 +75,7 @@ ROOT_URLCONF = 'backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR/'template'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -163,7 +164,7 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PAGINATION_CLASS':'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE':40,
+    'PAGE_SIZE':60,
 }
 
 

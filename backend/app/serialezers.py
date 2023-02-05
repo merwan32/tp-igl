@@ -68,6 +68,13 @@ class PostSerializers(serializers.ModelSerializer):
         model = Post
         fields = ('__all__')
 
+class OffreSerializers(serializers.ModelSerializer):
+    post = PostSerializers(read_only=False)
+    sender = UserSerializers(read_only=False)
+    class Meta:
+        model = Offre
+        fields = ('__all__')
+
 class ImageSerializers(serializers.ModelSerializer):
     Post = PostSerializers(read_only=False)
     class Meta:

@@ -17,7 +17,6 @@ import requests
 from bs4 import BeautifulSoup
 from geopy.geocoders import Nominatim
 from django.db.models import Q
-import os
 
 
 
@@ -32,7 +31,6 @@ class GoogleView(APIView):
             # Specify the CLIENT_ID of the app that accesses the backend:
             idinfo = id_token.verify_oauth2_token(token['id_token'], transport.requests.Request(), '938713439568-q7barlgciie3puigfe5bqjqqlgi2pphj.apps.googleusercontent.com')
             
-
             if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
                 raise ValueError('Wrong issuer.')
             data = {
@@ -41,7 +39,8 @@ class GoogleView(APIView):
                     "username": idinfo['name'],
                     "phone": None,
                     "email": idinfo['email'],
-                    "password": idinfo['sub']
+                    "password": idinfo['sub'],
+                    "profile_picture":idinfo['picture']
                     }
             if User.objects.filter(email=idinfo['email']).exists():
                 r = requests.post(
@@ -206,13 +205,13 @@ class mypostList(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         posts = Post.objects.filter(Q(user=user))
+
         postid = []
         for p in posts:
             postid.append(p.id)
             
 
-        images = Image.objects.filter(Q(id__in=postid))
-
+        images = Image.objects.filter(Q(Post__id__in=postid))
         seen_posts = set()
         new_list = []
         for obj in images:
@@ -222,14 +221,41 @@ class mypostList(generics.ListAPIView):
 
         return  new_list
 
+class myoffreList(generics.ListAPIView):
+    serializer_class = OffreSerializers
+    def get_queryset(self):
+        user = self.request.user
+        offres = Offre.objects.filter(Q(reciver=user))
+            
+        return  offres
+    
+class addoffre(generics.ListAPIView):
+    serializer_class = OffreSerializers
+    def post(self, request):
+        user = self.request.user
+        id = request.data['postId']
+        post = Post.objects.get(id = id)
 
+        offre = Offre()
+        offre.sender = user
+        offre.reciver = post.user
+        offre.post = post
+        offre.phone = request.data['phone']
+        offre.prix = request.data['prix']
+        offre.description = request.data['description']
+        offre.save()
+        
+        return  Response(request.data)
+    
 @api_view(['POST'])
 def CreatePost(request):
     adr = Adress()
     adr.lat = request.data['lat']
     adr.long = request.data['long']
-    ad = geolocator.reverse(str(request.data['lat'])+","+str(request.data['long']))
-    adr.commune = Commune.objects.filter(name__contains = str(ad.address)).first()
+    ad = geolocator.reverse(str(request.data['lat'])+","+str(request.data['long']), language="fr")
+    print('err')
+    print(ad.address.split(',')[-5].split()[0])
+    adr.commune = Commune.objects.filter(name__contains = ad.address.split(',')[-5].split()[0]).first()
     adr.save()
     p = Post()
     p.user = request.user
@@ -240,16 +266,33 @@ def CreatePost(request):
     p.prix = request.data['prix']
     p.adress = adr
     p.save()
-    for x in request.data['images']:
-        i = Image()
-        i.Post = p
-        i.img = x
-        i.save()
+    images = request.FILES.getlist('images')
+    for image in images:
+        Image.objects.create(Post=p, img=image)
+        
     return Response(request.data)
 
-def DeletePost(request):
+def DeletePost(request,id):
     
-    Post.objects.get(id = request.data['id']).delete()
+    Post.objects.get(id = id).delete()
+    return Response(request)
+
+
+class getcommunes(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = CommuneSerializers
+    def get_queryset(self):
+        communes = Commune.objects.all()
+        return  communes 
+
+
+
+class getwilaya(generics.ListAPIView):
+    permission_classes = (permissions.AllowAny,)
+    serializer_class = WilayaSerializers
+    def get_queryset(self):
+        wilayas = Wilaya.objects.all() 
+        return  wilayas
 
 
 class SearchListAPIView(generics.ListAPIView):
@@ -259,23 +302,29 @@ class SearchListAPIView(generics.ListAPIView):
     def get_queryset(self):
         query = self.request.GET.get('s')
         type = self.request.GET.get('type')
-        posts = Post.objects.filter(Q(description__contains=query) & Q(category__contains = type) ) if query else []
+        wilaya = self.request.GET.get('wilaya')
+        start_date = self.request.GET.get('first', None)
+        end_date = self.request.GET.get('last', None)
+        if start_date and end_date:
+            start_date = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
+        posts = Post.objects.filter(Q(description__contains=query) & Q(category__contains = type) & Q(adress__commune__wilaya__name__contains = wilaya)  ) if query else []
         
         postid = []
         for p in posts:
             postid.append(p.id)
             
 
-        images = Image.objects.filter(Q(id__in=postid))
+        images = Image.objects.filter(Q(Post__id__in=postid))
 
         seen_posts = set()
         new_list = []
         for obj in images:
             if obj.Post not in seen_posts:
                 new_list.append(obj)
-                seen_posts.add(obj.Post)  
+                seen_posts.add(obj.Post) 
 
-        return  new_list
+        return  images
 
 class postsList(generics.ListAPIView):
     permission_classes = (permissions.AllowAny,)
