@@ -7,7 +7,7 @@ from django.contrib.auth.models import Group
 
 class PostAdmin(admin.ModelAdmin):
     search_fields= ('category','type','surface','description','prix')
-    list_display= ('user','category','type','surface','description','prix')
+    list_display= ('user','category','type','surface','prix')
     list_filter= ['category','type']
 
 
@@ -43,8 +43,14 @@ class CommuneAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return False
 
+class AdressAdmin(admin.ModelAdmin):
+    search_fields= ('commune',)
+    list_display= ('commune',)
+
 admin.site.register(Post,PostAdmin)
 admin.site.register(Image,ImageAdmin)
 admin.site.register(Wilaya,WilayaAdmin)
 admin.site.register(Commune,CommuneAdmin)
+admin.site.register(Adress,AdressAdmin)
+admin.site.register(Offre)
 admin.site.unregister(Group)

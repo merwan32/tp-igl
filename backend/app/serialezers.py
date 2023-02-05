@@ -5,17 +5,6 @@ from django.contrib.auth.models import User
 
 
 
-class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
-
-    @classmethod
-    def get_token(cls, user):
-        token = super(MyTokenObtainPairSerializer, cls).get_token(user)
-
-        
-        token['username'] = user.username
-        token['email'] = user.email
-        return token
-
 
 class UserSerializer(serializers.ModelSerializer):
 
@@ -33,16 +22,17 @@ class UserSerializer(serializers.ModelSerializer):
         return instance
 
 
-class PostSerializers(serializers.ModelSerializer):
+
+class UserSerializers(serializers.ModelSerializer):
     class Meta:
-        model = Post
+        model = User
         fields = ('__all__')
 
 
-class ImageSerializers(serializers.ModelSerializer):
-    class Meta:
-        model = Image
-        fields = ('__all__')
+
+
+
+
 
 
 class WilayaSerializers(serializers.ModelSerializer):
@@ -51,6 +41,7 @@ class WilayaSerializers(serializers.ModelSerializer):
         fields = ('__all__')
 
 class CommuneSerializers(serializers.ModelSerializer):
+    wilaya = WilayaSerializers(read_only=False)
     class Meta:
         model = Commune
         fields = ('__all__')
@@ -63,4 +54,29 @@ class DiscussionSerializers(serializers.ModelSerializer):
 class MessageSerializers(serializers.ModelSerializer):
     class Meta:
         model = Message
+        fields = ('__all__')
+
+class AdressSerializers(serializers.ModelSerializer):
+    commune = CommuneSerializers(read_only=False)
+    class Meta:
+        model = Adress
+        fields = ('__all__')
+
+class PostSerializers(serializers.ModelSerializer):
+    adress = AdressSerializers(read_only=False)
+    class Meta:
+        model = Post
+        fields = ('__all__')
+
+class OffreSerializers(serializers.ModelSerializer):
+    post = PostSerializers(read_only=False)
+    sender = UserSerializers(read_only=False)
+    class Meta:
+        model = Offre
+        fields = ('__all__')
+
+class ImageSerializers(serializers.ModelSerializer):
+    Post = PostSerializers(read_only=False)
+    class Meta:
+        model = Image
         fields = ('__all__')
